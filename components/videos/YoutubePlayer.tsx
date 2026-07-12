@@ -23,6 +23,7 @@ type YTPlayer = {
   getCurrentTime: () => number;
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
   destroy: () => void;
+  getIframe: () => HTMLIFrameElement;
 };
 
 declare global {
@@ -36,7 +37,7 @@ declare global {
           height?: string | number;
           playerVars?: Record<string, string | number>;
           events?: {
-            onReady?: () => void;
+            onReady?: (event: { target: YTPlayer }) => void;
             onError?: () => void;
           };
         },
@@ -80,11 +81,24 @@ function loadYoutubeIframeApi(): Promise<void> {
   return youtubeApiPromise;
 }
 
+function fitIframeToContainer(iframe: HTMLIFrameElement) {
+  iframe.removeAttribute("width");
+  iframe.removeAttribute("height");
+  iframe.style.position = "absolute";
+  iframe.style.inset = "0";
+  iframe.style.width = "100%";
+  iframe.style.height = "100%";
+  iframe.style.border = "0";
+}
+
 export const YoutubePlayer = forwardRef<YoutubePlayerHandle, YoutubePlayerProps>(
   function YoutubePlayer({ url, onReadyChange }, ref) {
+    const wrapperRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<YTPlayer | null>(null);
-    const elementIdRef = useRef(`youtube-player-${Math.random().toString(36).slice(2)}`);
+    const elementIdRef = useRef(
+      `youtube-player-${Math.random().toString(36).slice(2)}`,
+    );
     const [isReady, setIsReady] = useState(false);
 
     const videoId = extractYoutubeVideoId(url);
@@ -109,6 +123,27 @@ export const YoutubePlayer = forwardRef<YoutubePlayerHandle, YoutubePlayerProps>
     }, [isReady, onReadyChange]);
 
     useEffect(() => {
+      if (!isReady || !playerRef.current) {
+        return;
+      }
+
+      const iframe = playerRef.current.getIframe();
+      fitIframeToContainer(iframe);
+
+      const wrapper = wrapperRef.current;
+      if (!wrapper || typeof ResizeObserver === "undefined") {
+        return;
+      }
+
+      const observer = new ResizeObserver(() => {
+        fitIframeToContainer(iframe);
+      });
+      observer.observe(wrapper);
+
+      return () => observer.disconnect();
+    }, [isReady]);
+
+    useEffect(() => {
       if (!videoId || !containerRef.current) {
         return;
       }
@@ -126,7 +161,8 @@ export const YoutubePlayer = forwardRef<YoutubePlayerHandle, YoutubePlayerProps>
 
         const mount = document.createElement("div");
         mount.id = elementIdRef.current;
-        mount.className = "h-full w-full";
+        mount.style.width = "100%";
+        mount.style.height = "100%";
         containerRef.current.appendChild(mount);
 
         playerRef.current = new window.YT.Player(elementIdRef.current, {
@@ -139,10 +175,12 @@ export const YoutubePlayer = forwardRef<YoutubePlayerHandle, YoutubePlayerProps>
             rel: 0,
           },
           events: {
-            onReady: () => {
-              if (!cancelled) {
-                setIsReady(true);
+            onReady: (event) => {
+              if (cancelled) {
+                return;
               }
+              fitIframeToContainer(event.target.getIframe());
+              setIsReady(true);
             },
             onError: () => {
               if (!cancelled) {
@@ -166,10 +204,13 @@ export const YoutubePlayer = forwardRef<YoutubePlayerHandle, YoutubePlayerProps>
     }
 
     return (
-      <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-black">
+      <div
+        ref={wrapperRef}
+        className="relative w-full overflow-hidden rounded-lg border bg-black pt-[56.25%]"
+      >
         <div
           ref={containerRef}
-          className="absolute inset-0 [&>div]:h-full [&>div]:w-full [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
+          className="absolute inset-0"
         />
       </div>
     );
