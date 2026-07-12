@@ -38,15 +38,15 @@ export function VideoCard({ video }: { video: VideoSummary }) {
               !showEditorTag && "justify-end",
             )}
           >
-            {(video.status === "to_edit" || video.status === "in_progress") && (
-              <VideoStatusBadge
-                status={video.status}
-                className="border-white/20 bg-black/50 text-white backdrop-blur-sm"
-              />
-            )}
-            {video.status === "completed" && (
-              <VideoStatusBadge status="completed" className="ml-auto" />
-            )}
+            <VideoStatusBadge
+              status={video.status}
+              className={cn(
+                "border-white/20 bg-black/50 text-white backdrop-blur-sm",
+                video.status === "completed" &&
+                  "border-emerald-400/40 bg-emerald-950/70 text-emerald-50",
+                !showEditorTag && "ml-auto",
+              )}
+            />
             {showEditorTag && (
               <Badge
                 variant="outline"
