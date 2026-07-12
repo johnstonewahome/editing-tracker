@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
@@ -23,7 +23,10 @@ import { Label } from "@/components/ui/label";
 import { CommentThread } from "@/components/videos/CommentThread";
 import { VersionList } from "@/components/videos/VersionList";
 import { VideoStatusBadge } from "@/components/videos/VideoStatusBadge";
-import { YoutubeEmbed } from "@/components/videos/YoutubeEmbed";
+import {
+  YoutubePlayer,
+  type YoutubePlayerHandle,
+} from "@/components/videos/YoutubePlayer";
 
 const statuses = [
   { value: "to_edit", label: "To Edit" },
@@ -46,6 +49,8 @@ export default function VideoDetailPage({
   const deleteVideo = useMutation(api.videos.deleteVideo);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [playerReady, setPlayerReady] = useState(false);
+  const playerRef = useRef<YoutubePlayerHandle>(null);
 
   const copyPath = async (path: string) => {
     await navigator.clipboard.writeText(path);
@@ -168,7 +173,11 @@ export default function VideoDetailPage({
       {video.youtubeUrl && (
         <div className="space-y-3">
           <h2 className="text-xl font-semibold">YouTube preview</h2>
-          <YoutubeEmbed url={video.youtubeUrl} />
+          <YoutubePlayer
+            ref={playerRef}
+            url={video.youtubeUrl}
+            onReadyChange={setPlayerReady}
+          />
           <a
             href={video.youtubeUrl}
             target="_blank"
@@ -232,7 +241,13 @@ export default function VideoDetailPage({
 
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Comments</h2>
-        <CommentThread videoId={videoId} status={video.status} />
+        <CommentThread
+          videoId={videoId}
+          status={video.status}
+          hasYoutube={!!video.youtubeUrl}
+          playerRef={playerRef}
+          playerReady={playerReady}
+        />
       </section>
     </div>
   );

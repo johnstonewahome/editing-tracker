@@ -57,6 +57,7 @@ export default defineSchema({
     videoId: v.id("videos"),
     userId: v.id("users"),
     body: v.string(),
+    timestampSeconds: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_video", ["videoId"]),
 });
