@@ -31,12 +31,33 @@ export function NotificationBell() {
   const badgeCount = unreadCount ?? 0;
   const showBadge = badgeCount > 0;
 
-  const handleNotificationClick = async (
+  const handleMarkRead = async (
+    event: React.MouseEvent,
     notificationId: Id<"notifications">,
-    videoId: Id<"videos">,
   ) => {
-    await markRead({ notificationId });
+    event.stopPropagation();
+    try {
+      await markRead({ notificationId });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to mark as read",
+      );
+    }
+  };
+
+  const handleOpenVideo = (videoId: Id<"videos">) => {
     router.push(`/videos/${videoId}`);
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead({});
+      toast.success("All notifications marked as read");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to mark all as read",
+      );
+    }
   };
 
   const handleClearAll = async () => {
@@ -79,7 +100,7 @@ export function NotificationBell() {
                 <button
                   type="button"
                   className="text-xs font-normal text-primary hover:underline"
-                  onClick={() => void markAllRead({})}
+                  onClick={() => void handleMarkAllRead()}
                 >
                   Mark all read
                 </button>
@@ -111,17 +132,25 @@ export function NotificationBell() {
                 "flex cursor-pointer flex-col items-start gap-1 py-2",
                 notification.readAt === undefined && "bg-muted/50",
               )}
-              onClick={() =>
-                void handleNotificationClick(
-                  notification._id,
-                  notification.videoId,
-                )
-              }
+              onClick={() => handleOpenVideo(notification.videoId)}
             >
               <span className="text-sm leading-snug">{notification.message}</span>
               <span className="text-xs text-muted-foreground">
                 {new Date(notification.createdAt).toLocaleString()}
               </span>
+              {notification.readAt === undefined && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-1 h-7 px-2 text-xs"
+                  onClick={(event) =>
+                    void handleMarkRead(event, notification._id)
+                  }
+                >
+                  Mark as read
+                </Button>
+              )}
             </DropdownMenuItem>
           ))
         )}
