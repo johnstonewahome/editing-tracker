@@ -7,6 +7,7 @@ import {
   canManageVideo,
   normalizeOptionalYoutubeUrl,
 } from "./lib/auth";
+import { createAssignmentNotification } from "./lib/notifications";
 import { videoStatusValidator } from "./schema";
 
 const videoSummaryValidator = v.object({
@@ -234,10 +235,25 @@ export const assignEditor = authedMutation({
       }
     }
 
+    const previousEditorId = video.assignedEditorId;
+
     await ctx.db.patch("videos", args.videoId, {
       assignedEditorId: args.editorId,
       updatedAt: Date.now(),
     });
+
+    if (
+      args.editorId &&
+      args.editorId !== previousEditorId &&
+      args.editorId !== ctx.user._id
+    ) {
+      await createAssignmentNotification(ctx, {
+        userId: args.editorId,
+        videoId: args.videoId,
+        actorId: ctx.user._id,
+        videoTitle: video.title,
+      });
+    }
 
     return null;
   },

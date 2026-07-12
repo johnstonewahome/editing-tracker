@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -81,7 +82,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
 
-          <DropdownMenu>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative size-9 rounded-full">
                 <Avatar className="size-9">
@@ -117,6 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>

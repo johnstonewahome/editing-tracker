@@ -41,7 +41,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_status", ["status"])
-    .index("by_createdBy", ["createdBy"]),
+    .index("by_createdBy", ["createdBy"])
+    .index("by_assignedEditor", ["assignedEditorId"]),
   videoVersions: defineTable({
     videoId: v.id("videos"),
     versionNumber: v.number(),
@@ -64,4 +65,13 @@ export default defineSchema({
   })
     .index("by_video", ["videoId"])
     .index("by_parent", ["parentCommentId"]),
+  notifications: defineTable({
+    userId: v.id("users"),
+    type: v.literal("assignment"),
+    videoId: v.id("videos"),
+    actorId: v.id("users"),
+    message: v.string(),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 });

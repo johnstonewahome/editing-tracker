@@ -13,6 +13,8 @@ import type * as comments from "../comments.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_customFunctions from "../lib/customFunctions.js";
+import type * as lib_notifications from "../lib/notifications.js";
+import type * as notifications from "../notifications.js";
 import type * as users from "../users.js";
 import type * as versions from "../versions.js";
 import type * as videos from "../videos.js";
@@ -29,6 +31,8 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/auth": typeof lib_auth;
   "lib/customFunctions": typeof lib_customFunctions;
+  "lib/notifications": typeof lib_notifications;
+  notifications: typeof notifications;
   users: typeof users;
   versions: typeof versions;
   videos: typeof videos;
