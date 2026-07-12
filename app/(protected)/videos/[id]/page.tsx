@@ -170,23 +170,49 @@ export default function VideoDetailPage({
         </CardContent>
       </Card>
 
-      {video.youtubeUrl && (
-        <div className="space-y-3">
-          <h2 className="text-xl font-semibold">YouTube preview</h2>
-          <YoutubePlayer
-            ref={playerRef}
-            url={video.youtubeUrl}
-            onReadyChange={setPlayerReady}
+      {video.youtubeUrl ? (
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start">
+          <div className="space-y-3">
+            <h2 className="text-xl font-semibold">YouTube preview</h2>
+            <YoutubePlayer
+              ref={playerRef}
+              url={video.youtubeUrl}
+              onReadyChange={setPlayerReady}
+            />
+            <a
+              href={video.youtubeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-primary underline"
+            >
+              Open on YouTube
+            </a>
+          </div>
+
+          <div className="flex min-h-[320px] flex-col gap-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)]">
+            <h2 className="text-xl font-semibold">Comments</h2>
+            <CommentThread
+              videoId={videoId}
+              status={video.status}
+              hasYoutube={!!video.youtubeUrl}
+              canMarkDone={video.canManage}
+              playerRef={playerRef}
+              playerReady={playerReady}
+            />
+          </div>
+        </section>
+      ) : (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Comments</h2>
+          <CommentThread
+            videoId={videoId}
+            status={video.status}
+            hasYoutube={false}
+            canMarkDone={video.canManage}
+            playerRef={playerRef}
+            playerReady={playerReady}
           />
-          <a
-            href={video.youtubeUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-primary underline"
-          >
-            Open on YouTube
-          </a>
-        </div>
+        </section>
       )}
 
       {video.canManage && (
@@ -237,17 +263,6 @@ export default function VideoDetailPage({
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Versions</h2>
         <VersionList videoId={videoId} canManage={video.canManage} />
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Comments</h2>
-        <CommentThread
-          videoId={videoId}
-          status={video.status}
-          hasYoutube={!!video.youtubeUrl}
-          playerRef={playerRef}
-          playerReady={playerReady}
-        />
       </section>
     </div>
   );

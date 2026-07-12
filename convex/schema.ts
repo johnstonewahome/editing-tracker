@@ -57,7 +57,11 @@ export default defineSchema({
     videoId: v.id("videos"),
     userId: v.id("users"),
     body: v.string(),
+    parentCommentId: v.optional(v.id("comments")),
     timestampSeconds: v.optional(v.number()),
+    done: v.optional(v.boolean()),
     createdAt: v.number(),
-  }).index("by_video", ["videoId"]),
+  })
+    .index("by_video", ["videoId"])
+    .index("by_parent", ["parentCommentId"]),
 });
