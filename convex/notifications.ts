@@ -2,9 +2,11 @@ import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
 import { QueryCtx } from "./_generated/server";
 import { authedMutation, authedQuery } from "./lib/customFunctions";
+import { notificationTypeValidator } from "./schema";
 
 const notificationValidator = v.object({
   _id: v.id("notifications"),
+  type: notificationTypeValidator,
   videoId: v.id("videos"),
   message: v.string(),
   readAt: v.optional(v.number()),
@@ -22,6 +24,7 @@ async function enrichNotification(
 
   return {
     _id: notification._id,
+    type: notification.type,
     videoId: notification.videoId,
     message: notification.message,
     readAt: notification.readAt,
@@ -43,6 +46,20 @@ export const assignedVideoCount = authedQuery({
       .collect();
 
     return videos.filter((video) => video.status !== "completed").length;
+  },
+});
+
+export const unreadCount = authedQuery({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+      .collect();
+
+    return notifications.filter((notification) => notification.readAt === undefined)
+      .length;
   },
 });
 
@@ -111,6 +128,23 @@ export const markAllNotificationsRead = authedMutation({
       if (notification.readAt === undefined) {
         await ctx.db.patch("notifications", notification._id, { readAt: now });
       }
+    }
+
+    return null;
+  },
+});
+
+export const clearAllNotifications = authedMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+      .collect();
+
+    for (const notification of notifications) {
+      await ctx.db.delete("notifications", notification._id);
     }
 
     return null;

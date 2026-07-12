@@ -2,6 +2,11 @@ import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
 import { QueryCtx } from "./_generated/server";
 import { canManageVideo } from "./lib/auth";
+import {
+  createCommentDoneNotification,
+  createCommentNotification,
+  createCommentReplyNotification,
+} from "./lib/notifications";
 import { authedMutation, authedQuery } from "./lib/customFunctions";
 
 const MAX_TIMESTAMP_SECONDS = 86400;
@@ -185,7 +190,27 @@ export const addComment = authedMutation({
       if (args.timestampSeconds !== undefined) {
         throw new Error("Replies cannot include timestamps");
       }
-    } else if (args.timestampSeconds !== undefined) {
+
+      const commentId = await ctx.db.insert("comments", {
+        videoId: args.videoId,
+        userId: ctx.user._id,
+        body,
+        parentCommentId: args.parentCommentId,
+        createdAt: Date.now(),
+      });
+
+      await createCommentReplyNotification(ctx, {
+        userId: parent.userId,
+        videoId: args.videoId,
+        commentId,
+        actorId: ctx.user._id,
+        videoTitle: video.title,
+      });
+
+      return commentId;
+    }
+
+    if (args.timestampSeconds !== undefined) {
       if (
         !Number.isInteger(args.timestampSeconds) ||
         args.timestampSeconds < 0 ||
@@ -195,15 +220,26 @@ export const addComment = authedMutation({
       }
     }
 
-    return await ctx.db.insert("comments", {
+    const commentId = await ctx.db.insert("comments", {
       videoId: args.videoId,
       userId: ctx.user._id,
       body,
-      parentCommentId: args.parentCommentId,
-      timestampSeconds: args.parentCommentId ? undefined : args.timestampSeconds,
-      done: args.parentCommentId ? undefined : false,
+      timestampSeconds: args.timestampSeconds,
+      done: false,
       createdAt: Date.now(),
     });
+
+    if (video.assignedEditorId) {
+      await createCommentNotification(ctx, {
+        userId: video.assignedEditorId,
+        videoId: args.videoId,
+        commentId,
+        actorId: ctx.user._id,
+        videoTitle: video.title,
+      });
+    }
+
+    return commentId;
   },
 });
 
@@ -233,6 +269,17 @@ export const toggleCommentDone = authedMutation({
     }
 
     await ctx.db.patch("comments", args.commentId, { done: args.done });
+
+    if (args.done) {
+      await createCommentDoneNotification(ctx, {
+        userId: comment.userId,
+        videoId: comment.videoId,
+        commentId: args.commentId,
+        actorId: ctx.user._id,
+        videoTitle: video.title,
+      });
+    }
+
     return null;
   },
 });

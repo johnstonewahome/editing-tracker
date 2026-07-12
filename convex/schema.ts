@@ -13,6 +13,13 @@ export const userRoleValidator = v.union(
   v.literal("admin"),
 );
 
+export const notificationTypeValidator = v.union(
+  v.literal("assignment"),
+  v.literal("comment"),
+  v.literal("comment_reply"),
+  v.literal("comment_done"),
+);
+
 export default defineSchema({
   ...authTables,
   users: defineTable({
@@ -67,8 +74,9 @@ export default defineSchema({
     .index("by_parent", ["parentCommentId"]),
   notifications: defineTable({
     userId: v.id("users"),
-    type: v.literal("assignment"),
+    type: notificationTypeValidator,
     videoId: v.id("videos"),
+    commentId: v.optional(v.id("comments")),
     actorId: v.id("users"),
     message: v.string(),
     readAt: v.optional(v.number()),

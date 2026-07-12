@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { Bell } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
@@ -20,16 +21,14 @@ import { cn } from "@/lib/utils";
 
 export function NotificationBell() {
   const router = useRouter();
+  const unreadCount = useQuery(api.notifications.unreadCount);
   const assignedCount = useQuery(api.notifications.assignedVideoCount);
   const notifications = useQuery(api.notifications.listNotifications);
   const markRead = useMutation(api.notifications.markNotificationRead);
   const markAllRead = useMutation(api.notifications.markAllNotificationsRead);
+  const clearAll = useMutation(api.notifications.clearAllNotifications);
 
-  const unreadCount =
-    notifications?.filter((notification) => notification.readAt === undefined)
-      .length ?? 0;
-
-  const badgeCount = assignedCount ?? 0;
+  const badgeCount = unreadCount ?? 0;
   const showBadge = badgeCount > 0;
 
   const handleNotificationClick = async (
@@ -40,6 +39,17 @@ export function NotificationBell() {
     router.push(`/videos/${videoId}`);
   };
 
+  const handleClearAll = async () => {
+    try {
+      await clearAll({});
+      toast.success("Notifications cleared");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to clear notifications",
+      );
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -47,7 +57,7 @@ export function NotificationBell() {
           variant="ghost"
           size="icon"
           className="relative"
-          aria-label="Video assignments"
+          aria-label="Notifications"
         >
           <Bell className="size-5" />
           {showBadge && (
@@ -62,15 +72,26 @@ export function NotificationBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between gap-2">
-          <span>Assigned videos</span>
-          {unreadCount > 0 && (
-            <button
-              type="button"
-              className="text-xs font-normal text-primary hover:underline"
-              onClick={() => void markAllRead({})}
-            >
-              Mark all read
-            </button>
+          <span>Notifications</span>
+          {notifications && notifications.length > 0 && (
+            <div className="flex items-center gap-2">
+              {badgeCount > 0 && (
+                <button
+                  type="button"
+                  className="text-xs font-normal text-primary hover:underline"
+                  onClick={() => void markAllRead({})}
+                >
+                  Mark all read
+                </button>
+              )}
+              <button
+                type="button"
+                className="text-xs font-normal text-muted-foreground hover:underline"
+                onClick={() => void handleClearAll()}
+              >
+                Clear all
+              </button>
+            </div>
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -78,9 +99,9 @@ export function NotificationBell() {
           <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
         ) : notifications.length === 0 ? (
           <DropdownMenuItem disabled className="text-muted-foreground">
-            {showBadge
-              ? `You have ${badgeCount} active video${badgeCount === 1 ? "" : "s"} assigned.`
-              : "No assignment notifications yet."}
+            {(assignedCount ?? 0) > 0
+              ? `You have ${assignedCount} active video${assignedCount === 1 ? "" : "s"} assigned.`
+              : "No notifications yet."}
           </DropdownMenuItem>
         ) : (
           notifications.slice(0, 10).map((notification) => (
@@ -97,17 +118,14 @@ export function NotificationBell() {
                 )
               }
             >
-              <span className="text-sm font-medium">{notification.videoTitle}</span>
-              <span className="text-xs text-muted-foreground">
-                Assigned by {notification.actorUsername}
-              </span>
+              <span className="text-sm leading-snug">{notification.message}</span>
               <span className="text-xs text-muted-foreground">
                 {new Date(notification.createdAt).toLocaleString()}
               </span>
             </DropdownMenuItem>
           ))
         )}
-        {showBadge && (
+        {(assignedCount ?? 0) > 0 && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
