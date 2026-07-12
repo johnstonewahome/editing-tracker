@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { AvatarCropDialog } from "@/components/settings/AvatarCropDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
   const saveAvatar = useMutation(api.users.saveAvatar);
   const changePassword = useAction(api.users.changePassword);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [username, setUsername] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -25,12 +27,22 @@ export default function SettingsPage() {
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser?.username) {
       setUsername(currentUser.username);
     }
   }, [currentUser?.username]);
+
+  useEffect(() => {
+    return () => {
+      if (selectedImageSrc) {
+        URL.revokeObjectURL(selectedImageSrc);
+      }
+    };
+  }, [selectedImageSrc]);
 
   const handleUsernameSave = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -45,19 +57,34 @@ export default function SettingsPage() {
     }
   };
 
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+
+    if (selectedImageSrc) {
+      URL.revokeObjectURL(selectedImageSrc);
+    }
+
+    setSelectedImageSrc(URL.createObjectURL(file));
+    setCropDialogOpen(true);
+    event.target.value = "";
+  };
+
+  const handleAvatarUpload = async (blob: Blob) => {
     setIsUploadingAvatar(true);
     try {
       const uploadUrl = await generateUploadUrl();
       const result = await fetch(uploadUrl, {
         method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
+        headers: { "Content-Type": "image/jpeg" },
+        body: blob,
       });
 
       if (!result.ok) {
@@ -69,8 +96,17 @@ export default function SettingsPage() {
       toast.success("Avatar updated");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to upload avatar");
+      throw error;
     } finally {
       setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleCropDialogChange = (open: boolean) => {
+    setCropDialogOpen(open);
+    if (!open && selectedImageSrc) {
+      URL.revokeObjectURL(selectedImageSrc);
+      setSelectedImageSrc(null);
     }
   };
 
@@ -115,19 +151,37 @@ export default function SettingsPage() {
               {currentUser?.username?.slice(0, 2).toUpperCase() ?? "??"}
             </AvatarFallback>
           </Avatar>
-          <div>
-            <Input
+          <div className="space-y-2">
+            <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
-              onChange={(event) => void handleAvatarChange(event)}
+              className="hidden"
+              onChange={handleFileSelect}
               disabled={isUploadingAvatar}
             />
-            <p className="mt-2 text-xs text-muted-foreground">
-              Upload a square image for best results.
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+            >
+              {isUploadingAvatar ? "Uploading..." : "Upload avatar"}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Choose an image, then crop and resize it before saving.
             </p>
           </div>
         </CardContent>
       </Card>
+
+      <AvatarCropDialog
+        open={cropDialogOpen}
+        onOpenChange={handleCropDialogChange}
+        imageSrc={selectedImageSrc}
+        onConfirm={handleAvatarUpload}
+        isUploading={isUploadingAvatar}
+      />
 
       <Card>
         <CardHeader>
