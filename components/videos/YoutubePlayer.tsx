@@ -32,6 +32,8 @@ declare global {
         elementId: string,
         config: {
           videoId: string;
+          width?: string | number;
+          height?: string | number;
           playerVars?: Record<string, string | number>;
           events?: {
             onReady?: () => void;
@@ -124,10 +126,13 @@ export const YoutubePlayer = forwardRef<YoutubePlayerHandle, YoutubePlayerProps>
 
         const mount = document.createElement("div");
         mount.id = elementIdRef.current;
+        mount.className = "h-full w-full";
         containerRef.current.appendChild(mount);
 
         playerRef.current = new window.YT.Player(elementIdRef.current, {
           videoId,
+          width: "100%",
+          height: "100%",
           playerVars: {
             enablejsapi: 1,
             origin: window.location.origin,
@@ -161,8 +166,11 @@ export const YoutubePlayer = forwardRef<YoutubePlayerHandle, YoutubePlayerProps>
     }
 
     return (
-      <div className="aspect-video overflow-hidden rounded-lg border">
-        <div ref={containerRef} className="h-full w-full" />
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-black">
+        <div
+          ref={containerRef}
+          className="absolute inset-0 [&>div]:h-full [&>div]:w-full [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
+        />
       </div>
     );
   },

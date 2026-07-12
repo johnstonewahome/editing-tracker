@@ -172,7 +172,7 @@ export default function VideoDetailPage({
 
       {video.youtubeUrl ? (
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start">
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             <h2 className="text-xl font-semibold">YouTube preview</h2>
             <YoutubePlayer
               ref={playerRef}
